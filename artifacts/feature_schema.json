@@ -1,0 +1,12 @@
+{
+  "features": [
+    "latency_sec",
+    "revision_delta",
+    "verification_clicks",
+    "self_reported_confidence",
+    "task_difficulty",
+    "action_accept",
+    "ai_correct"
+  ],
+  "target": "overreliance_label"
+}
