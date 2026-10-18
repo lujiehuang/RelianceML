@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-train-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Compile
+        run: python -m compileall src tests
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Generate synthetic data
+        run: python src/generate_data.py
+
+      - name: Train models
+        run: python src/train.py
+
+      - name: Start API
+        run: |
+          uvicorn src.api:app --host 127.0.0.1 --port 8000 > /tmp/relianceml.log 2>&1 &
+          echo $! > /tmp/relianceml.pid
+
+      - name: API health check
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/relianceml.log
+          exit 1
+
+      - name: Prediction smoke test
+        run: |
+          curl -fsS -X POST http://127.0.0.1:8000/predict             -H "Content-Type: application/json"             -d '{"latency_sec":5.2,"revision_delta":0.03,"verification_clicks":0,"self_reported_confidence":0.91,"task_difficulty":2,"action_accept":1,"ai_correct":0}'
